@@ -6,10 +6,6 @@ import {
   setChatStatus,
 } from "@/lib/chat-store";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const HUMAN_KEYWORDS = [
   "human",
   "agent",
@@ -81,14 +77,19 @@ export async function POST(req: Request) {
       return Response.json(getChat(thread.id));
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+
+    if (!apiKey) {
       addMessage(
         thread.id,
         "ai",
-        "OpenAI API key is missing. Please add OPENAI_API_KEY."
+        "OpenAI API key is missing. Please add OPENAI_API_KEY in Vercel and .env.local."
       );
       return Response.json(getChat(thread.id));
     }
+
+    const openai = new OpenAI({ apiKey });
 
     const recentConversation = getChat(thread.id)!
       .messages.slice(-12)
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
       .join("\n");
 
     const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model,
       instructions:
         "You are MochiAura AI, a friendly ecommerce support assistant for skincare, cute items, and tech gadgets. Keep replies short, helpful, and clear. Help with products, prices, delivery, and recommendations. For refunds, order problems, payment issues, or complaints, tell the customer you are connecting a human agent instead of trying to solve it yourself.",
       input: recentConversation,
